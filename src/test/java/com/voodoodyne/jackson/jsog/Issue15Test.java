@@ -1,6 +1,8 @@
 package com.voodoodyne.jackson.jsog;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.testng.annotations.Test;
@@ -36,10 +38,8 @@ public class Issue15Test {
   }
 
   private void testWithPolymorphicStrategy(ObjectMapper.DefaultTyping typingStragegy) throws IOException {
-    Thing t = new Thing();
-    t.setName("foo");
-
-    t.setDate(new Date());
+    Thing t = new Thing("foo",new Date());
+    t.getThings()[1] = new Thing("bar", new Date(0));
 
     ObjectMapper mapper = new ObjectMapper();
     mapper.enableDefaultTyping(typingStragegy);
@@ -47,6 +47,7 @@ public class Issue15Test {
     // issue is JSOG specific since removing this line causes all tests to
     // pass in 2.5.4 (did not test earlier)
     mapper.addMixIn(Object.class, JSOGMixin.class);
+    mapper.addMixIn(Thing.class, ThingMixin.class);
 
     // No difference if we use the module workaround from Issue #5
 
@@ -55,8 +56,14 @@ public class Issue15Test {
 //    mapper.registerModule(jModule);
 
     String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(t);
+    //System.out.println(json);
     mapper.readValue(json, Thing.class);
   }
 
   @JsonIdentityInfo(generator = JSOGGenerator.class) private static class JSOGMixin {}
+
+  private static class ThingMixin {
+    @JsonCreator
+    ThingMixin(@JsonProperty("name")String name, @JsonProperty("date") Date date){}
+  }
 }
