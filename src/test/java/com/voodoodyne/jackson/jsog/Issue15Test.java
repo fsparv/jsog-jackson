@@ -3,8 +3,9 @@ package com.voodoodyne.jackson.jsog;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.jsontype.TypeResolverBuilder;
 import org.testng.annotations.Test;
 
 
@@ -42,7 +43,12 @@ public class Issue15Test {
     t.getThings()[1] = new Thing("bar", new Date(0));
 
     ObjectMapper mapper = new ObjectMapper();
-    mapper.enableDefaultTyping(typingStragegy);
+    TypeResolverBuilder<?> typeResolver = new CustomTypeResolverBuilder(typingStragegy);
+    typeResolver.init(JsonTypeInfo.Id.CLASS, null);
+    typeResolver.inclusion(JsonTypeInfo.As.PROPERTY);
+    typeResolver.typeProperty("@JAVA");
+    mapper.setDefaultTyping(typeResolver);
+//    mapper.enableDefaultTyping(typingStragegy);
 
     // issue is JSOG specific since removing this line causes all tests to
     // pass in 2.5.4 (did not test earlier)
@@ -56,7 +62,7 @@ public class Issue15Test {
 //    mapper.registerModule(jModule);
 
     String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(t);
-    //System.out.println(json);
+    System.out.println(json);
     mapper.readValue(json, Thing.class);
   }
 
@@ -65,5 +71,15 @@ public class Issue15Test {
   private static class ThingMixin {
     @JsonCreator
     ThingMixin(@JsonProperty("name")String name, @JsonProperty("date") Date date){}
+  }
+
+  public class CustomTypeResolverBuilder extends ObjectMapper.DefaultTypeResolverBuilder
+  {
+    public CustomTypeResolverBuilder(ObjectMapper.DefaultTyping defaultTyping)
+    {
+      super(defaultTyping);
+    }
+
+
   }
 }
